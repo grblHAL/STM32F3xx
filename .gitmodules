@@ -1,0 +1,9 @@
+[submodule "eeprom"]
+	path = eeprom
+	url = https://github.com/grblHAL/Plugin_EEPROM
+[submodule "grbl"]
+	path = grbl
+	url = https://github.com/grblHAL/core
+[submodule "keypad"]
+	path = keypad
+	url = https://github.com/grblHAL/Plugin_I2C_keypad
