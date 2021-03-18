@@ -34,6 +34,8 @@ static bool use_tx2data = false;
 static stream_rx_buffer_t rxbuf = {0};
 static stream_block_tx_buffer_t txbuf = {0};
 
+// NOTE: USB interrupt priority should be set lower than stepper/step timer to avoid jitter
+// It is set in HAL_PCD_MspInit() in usbd_conf.c
 void usbInit (void)
 {
     MX_USB_DEVICE_Init();
@@ -142,6 +144,7 @@ bool usbSuspendInput (bool suspend)
     return stream_rx_suspend(&rxbuf, suspend);
 }
 
+// NOTE: add a call to this function as the first line CDC_Receive_FS() in usbd_cdc_if.c
 void usbBufferInput (uint8_t *data, uint32_t length)
 {
     while(length--) {
