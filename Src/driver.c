@@ -88,95 +88,7 @@ static probe_state_t probe = {
 static modbus_stream_t modbus_stream = {0};
 #endif
 
-#if STEP_OUTMODE == GPIO_MAP
-
-static const uint32_t c_step_outmap[] = {
-	0,
-	X_STEP_BIT,
-	Y_STEP_BIT,
-	Y_STEP_BIT | X_STEP_BIT,
-	Z_STEP_BIT,
-	Z_STEP_BIT | X_STEP_BIT,
-	Z_STEP_BIT | Y_STEP_BIT,
-	Z_STEP_BIT | Y_STEP_BIT | X_STEP_BIT,
-#if N_AXIS > 3
-	A_STEP_BIT,
-	A_STEP_BIT | X_STEP_BIT,
-	A_STEP_BIT | Y_STEP_BIT,
-	A_STEP_BIT | Y_STEP_BIT | X_STEP_BIT,
-	A_STEP_BIT | Z_STEP_BIT,
-	A_STEP_BIT | Z_STEP_BIT | X_STEP_BIT,
-	A_STEP_BIT | Z_STEP_BIT | Y_STEP_BIT,
-	A_STEP_BIT | Z_STEP_BIT | Y_STEP_BIT | X_STEP_BIT,
-#endif
-#if N_AXIS > 4
-	B_STEP_BIT,
-	B_STEP_BIT | X_STEP_BIT,
-	B_STEP_BIT | Y_STEP_BIT,
-	B_STEP_BIT | X_STEP_BIT,
-	B_STEP_BIT | Z_STEP_BIT,
-	B_STEP_BIT | Z_STEP_BIT | X_STEP_BIT,
-	B_STEP_BIT | Z_STEP_BIT | Y_STEP_BIT,
-	B_STEP_BIT | Z_STEP_BIT | Y_STEP_BIT | X_STEP_BIT,
-	B_STEP_BIT | A_STEP_BIT,
-	B_STEP_BIT | A_STEP_BIT | X_STEP_BIT,
-	B_STEP_BIT | A_STEP_BIT | Y_STEP_BIT,
-	B_STEP_BIT | A_STEP_BIT | Y_STEP_BIT | X_STEP_BIT,
-	B_STEP_BIT | A_STEP_BIT | Z_STEP_BIT,
-	B_STEP_BIT | A_STEP_BIT | Z_STEP_BIT | X_STEP_BIT,
-	B_STEP_BIT | A_STEP_BIT | Z_STEP_BIT | Y_STEP_BIT,
-	B_STEP_BIT | A_STEP_BIT | Z_STEP_BIT | Y_STEP_BIT | X_STEP_BIT,
-#endif
-};
-
-static uint32_t step_outmap[sizeof(c_step_outmap) / sizeof(uint32_t)];
-
-#endif
-
-#if DIRECTION_OUTMODE == GPIO_MAP
-
-static const uint32_t c_dir_outmap[] = {
-	0,
-	X_DIRECTION_BIT,
-	Y_DIRECTION_BIT,
-	Y_DIRECTION_BIT | X_DIRECTION_BIT,
-	Z_DIRECTION_BIT,
-	Z_DIRECTION_BIT | X_DIRECTION_BIT,
-	Z_DIRECTION_BIT | Y_DIRECTION_BIT,
-	Z_DIRECTION_BIT | Y_DIRECTION_BIT | X_DIRECTION_BIT,
-#if N_AXIS > 3
-	A_DIRECTION_BIT,
-	A_DIRECTION_BIT | X_DIRECTION_BIT,
-	A_DIRECTION_BIT | Y_DIRECTION_BIT,
-	A_DIRECTION_BIT | Y_DIRECTION_BIT | X_DIRECTION_BIT,
-	A_DIRECTION_BIT | Z_DIRECTION_BIT,
-	A_DIRECTION_BIT | Z_DIRECTION_BIT | X_DIRECTION_BIT,
-	A_DIRECTION_BIT | Z_DIRECTION_BIT | Y_DIRECTION_BIT,
-	A_DIRECTION_BIT | Z_DIRECTION_BIT | Y_DIRECTION_BIT | X_DIRECTION_BIT,
-#endif
-#if N_AXIS > 4
-	B_DIRECTION_BIT,
-	B_DIRECTION_BIT | X_DIRECTION_BIT,
-	B_DIRECTION_BIT | Y_DIRECTION_BIT,
-	B_DIRECTION_BIT | X_DIRECTION_BIT,
-	B_DIRECTION_BIT | Z_DIRECTION_BIT,
-	B_DIRECTION_BIT | Z_DIRECTION_BIT | X_DIRECTION_BIT,
-	B_DIRECTION_BIT | Z_DIRECTION_BIT | Y_DIRECTION_BIT,
-	B_DIRECTION_BIT | Z_DIRECTION_BIT | Y_DIRECTION_BIT | X_DIRECTION_BIT,
-	B_DIRECTION_BIT | A_DIRECTION_BIT,
-	B_DIRECTION_BIT | A_DIRECTION_BIT | X_DIRECTION_BIT,
-	B_DIRECTION_BIT | A_DIRECTION_BIT | Y_DIRECTION_BIT,
-	B_DIRECTION_BIT | A_DIRECTION_BIT | Y_DIRECTION_BIT | X_DIRECTION_BIT,
-	B_DIRECTION_BIT | A_DIRECTION_BIT | Z_DIRECTION_BIT,
-	B_DIRECTION_BIT | A_DIRECTION_BIT | Z_DIRECTION_BIT | X_DIRECTION_BIT,
-	B_DIRECTION_BIT | A_DIRECTION_BIT | Z_DIRECTION_BIT | Y_DIRECTION_BIT,
-	B_DIRECTION_BIT | A_DIRECTION_BIT | Z_DIRECTION_BIT | Y_DIRECTION_BIT | X_DIRECTION_BIT,
-#endif
-};
-
-static uint32_t dir_outmap[sizeof(c_dir_outmap) / sizeof(uint32_t)];
-
-#endif
+#include "grbl/stepdir_map.h"
 
 #ifndef X_LIMIT_PORT
   #define X_LIMIT_PORT LIMIT_PORT
@@ -576,29 +488,8 @@ static uint32_t getElapsedTicks (void)
 void settings_changed (settings_t *settings)
 {
 
-#ifdef SPINDLE_PWM_PIN
-    hal.driver_cap.variable_spindle = settings->spindle.rpm_min < settings->spindle.rpm_max;
-#endif
-
 #if (STEP_OUTMODE == GPIO_MAP) || (DIRECTION_OUTMODE == GPIO_MAP)
-    uint8_t i;
-#endif
-
-#if STEP_OUTMODE == GPIO_MAP
-
-    i = sizeof(step_outmap) / sizeof(uint32_t);
-    do {
-        i--;
-        step_outmap[i] = c_step_outmap[i ^ settings->steppers.step_invert.value];
-    } while(i);
-#endif
-
-#if DIRECTION_OUTMODE == GPIO_MAP
-    i = sizeof(dir_outmap) / sizeof(uint32_t);
-    do {
-        i--;
-        dir_outmap[i] = c_dir_outmap[i ^ settings->steppers.dir_invert.value];
-    } while(i);
+    stepdirmap_init(settings);
 #endif
 
     stepperSetStepOutputs((axes_signals_t){0});
@@ -1027,7 +918,7 @@ bool driver_init (void)
     // Enable EEPROM and serial port here for Grbl to be able to configure itself and report any errors
 
     hal.info = "STM32F303";
-    hal.driver_version = "210423";
+    hal.driver_version = "210525";
 #ifdef BOARD_NAME
     hal.board = BOARD_NAME;
 #endif
