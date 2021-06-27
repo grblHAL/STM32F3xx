@@ -488,7 +488,7 @@ static uint32_t getElapsedTicks (void)
 void settings_changed (settings_t *settings)
 {
 
-#if (STEP_OUTMODE == GPIO_MAP) || (DIRECTION_OUTMODE == GPIO_MAP)
+#if USE_STEPDIR_MAP
     stepdirmap_init(settings);
 #endif
 
@@ -971,7 +971,7 @@ bool driver_init (void)
     hal.stream.write = usbWriteS;
     hal.stream.write_all = usbWriteS;
     hal.stream.write_char = usbPutC;
-    hal.stream.get_rx_buffer_available = usbRxFree;
+    hal.stream.get_rx_buffer_free = usbRxFree;
     hal.stream.reset_read_buffer = usbRxFlush;
     hal.stream.cancel_read_buffer = usbRxCancel;
     hal.stream.suspend_read = usbSuspendInput;
@@ -980,7 +980,7 @@ bool driver_init (void)
     hal.stream.write = serialWriteS;
     hal.stream.write_all = serialWriteS;
     hal.stream.write_char = serialPutC;
-    hal.stream.get_rx_buffer_available = serialRxFree;
+    hal.stream.get_rx_buffer_free = serialRxFree;
     hal.stream.reset_read_buffer = serialRxFlush;
     hal.stream.cancel_read_buffer = serialRxCancel;
     hal.stream.suspend_read = serialSuspendInput;
