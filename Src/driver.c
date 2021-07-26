@@ -918,7 +918,7 @@ bool driver_init (void)
     // Enable EEPROM and serial port here for Grbl to be able to configure itself and report any errors
 
     hal.info = "STM32F303";
-    hal.driver_version = "210525";
+    hal.driver_version = "210716";
 #ifdef BOARD_NAME
     hal.board = BOARD_NAME;
 #endif
@@ -967,29 +967,9 @@ bool driver_init (void)
     hal.get_elapsed_ticks = getElapsedTicks;
 
 #if USB_SERIAL_CDC
-    hal.stream.read = usbGetC;
-    hal.stream.write = usbWriteS;
-    hal.stream.write_all = usbWriteS;
-    hal.stream.write_char = usbPutC;
-    hal.stream.get_rx_buffer_free = usbRxFree;
-    hal.stream.reset_read_buffer = usbRxFlush;
-    hal.stream.cancel_read_buffer = usbRxCancel;
-    hal.stream.suspend_read = usbSuspendInput;
+    memcpy(&hal.stream, usbInit(), sizeof(io_stream_t));
 #else
-    hal.stream.read = serialGetC;
-    hal.stream.write = serialWriteS;
-    hal.stream.write_all = serialWriteS;
-    hal.stream.write_char = serialPutC;
-    hal.stream.get_rx_buffer_free = serialRxFree;
-    hal.stream.reset_read_buffer = serialRxFlush;
-    hal.stream.cancel_read_buffer = serialRxCancel;
-    hal.stream.suspend_read = serialSuspendInput;
-#endif
-
-#if USB_SERIAL_CDC
-    usbInit();
-#else
-    serialInit();
+    memcpy(&hal.stream, serialInit(), sizeof(io_stream_t));
 #endif
 
 #ifdef I2C_PORT
