@@ -739,6 +739,8 @@ void settings_changed (settings_t *settings)
         HAL_NVIC_EnableIRQ(EXTI15_10_IRQn);
 #endif
     }
+
+    hal.limits.enable(settings->limits.flags.hard_enabled, false);
 }
 
 // Initializes MCU peripherals for Grbl use
@@ -918,7 +920,7 @@ bool driver_init (void)
     // Enable EEPROM and serial port here for Grbl to be able to configure itself and report any errors
 
     hal.info = "STM32F303";
-    hal.driver_version = "210716";
+    hal.driver_version = "210808";
 #ifdef BOARD_NAME
     hal.board = BOARD_NAME;
 #endif
