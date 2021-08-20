@@ -31,14 +31,15 @@
 #include <stdbool.h>
 #include <stdint.h>
 
+#ifndef OVERRIDE_MY_MACHINE
+#include "my_machine.h"
+#endif
+
 #include "main.h"
 #include "grbl/hal.h"
 #include "grbl/grbl.h"
 #include "grbl/nuts_bolts.h"
-
-#ifndef OVERRIDE_MY_MACHINE
-#include "my_machine.h"
-#endif
+#include "grbl/driver_opts.h"
 
 #define DIGITAL_OUT(port, bit, on) { if(on) port->BSRR = bit; else port->BRR = bit; }
 
@@ -48,31 +49,6 @@
 #define timeri(p) TIM ## p ## _IRQn
 #define timerHANDLER(p) timerh(p)
 #define timerh(p) TIM ## p ## _IRQHandler
-
-// Configuration
-// Set value to 1 to enable, 0 to disable
-
-#ifndef USB_SERIAL_CDC
-#define USB_SERIAL_CDC      0 // for UART comms
-#endif
-#ifndef SDCARD_ENABLE
-#define SDCARD_ENABLE       0
-#endif
-#ifndef KEYPAD_ENABLE
-#define KEYPAD_ENABLE       0
-#endif
-#ifndef ODOMETER_ENABLE
-#define ODOMETER_ENABLE     0
-#endif
-#ifndef PPI_ENABLE
-#define PPI_ENABLE       	0
-#endif
-#ifndef EEPROM_ENABLE
-#define EEPROM_ENABLE       0
-#endif
-#ifndef EEPROM_IS_FRAM
-#define EEPROM_IS_FRAM      0
-#endif
 
 // Define GPIO output mode options
 
@@ -113,14 +89,8 @@
 #define DEBOUNCE_TIMER_IRQHandler   timerHANDLER(DEBOUNCE_TIMER_N)
 
 #ifdef BOARD_CNC_BOOSTERPACK
-  #if N_AXIS > 3
-    #error Max number of axes is 3!
-  #endif
   #include "cnc_boosterpack_map.h"
 #elif defined(BOARD_CNC3040)
-  #if EEPROM_ENABLE
-    #error EEPROM plugin not supported!
-  #endif
   #include "cnc3040_map.h"
 #elif defined(BOARD_MY_MACHINE)
 #include "my_machine_map.h"
@@ -156,6 +126,41 @@
 
 #if SDCARD_ENABLE && !defined(SD_CS_PORT)
 #error SD card plugin not supported!
+#endif
+
+typedef struct {
+    pin_function_t id;
+    GPIO_TypeDef *port;
+    uint8_t pin;
+    uint32_t bit;
+    pin_group_t group;
+    volatile bool active;
+    volatile bool debounce;
+    pin_irq_mode_t irq_mode;
+    pin_mode_t cap;
+    ioport_interrupt_callback_ptr interrupt_callback;
+    const char *description;
+} input_signal_t;
+
+typedef struct {
+    pin_function_t id;
+    GPIO_TypeDef *port;
+    uint8_t pin;
+    pin_group_t group;
+    pin_mode_t mode;
+    const char *description;
+} output_signal_t;
+
+typedef struct {
+    uint8_t n_pins;
+    union {
+        input_signal_t *inputs;
+        output_signal_t *outputs;
+    } pins;
+} pin_group_pins_t;
+
+#ifdef HAS_BOARD_INIT
+void board_init (void);
 #endif
 
 bool driver_init (void);
