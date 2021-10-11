@@ -1019,7 +1019,7 @@ bool driver_init (void)
     // Enable EEPROM and serial port here for Grbl to be able to configure itself and report any errors
 
     hal.info = "STM32F303";
-    hal.driver_version = "210908";
+    hal.driver_version = "210930";
 #ifdef BOARD_NAME
     hal.board = BOARD_NAME;
 #endif
