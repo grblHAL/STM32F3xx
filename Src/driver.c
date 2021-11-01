@@ -86,10 +86,6 @@ static probe_state_t probe = {
     .connected = On
 };
 
-#if MODBUS_ENABLE
-static modbus_stream_t modbus_stream = {0};
-#endif
-
 #include "grbl/stepdir_map.h"
 
 static input_signal_t inputpin[] = {
@@ -1019,7 +1015,7 @@ bool driver_init (void)
     // Enable EEPROM and serial port here for Grbl to be able to configure itself and report any errors
 
     hal.info = "STM32F303";
-    hal.driver_version = "210930";
+    hal.driver_version = "211029";
 #ifdef BOARD_NAME
     hal.board = BOARD_NAME;
 #endif
@@ -1124,22 +1120,10 @@ bool driver_init (void)
 #endif
 
 #if MODBUS_ENABLE
-
-    modbus_stream.write = serial2Write;
-    modbus_stream.read = serial2GetC;
-    modbus_stream.flush_rx_buffer = serial2RxFlush;
-    modbus_stream.flush_tx_buffer = serial2TxFlush;
-    modbus_stream.get_rx_buffer_count = serial2RxCount;
-    modbus_stream.get_tx_buffer_count = serial2TxCount;
-    modbus_stream.set_baud_rate = serial2SetBaudRate;
-
-    bool modbus = modbus_init(&modbus_stream);
-
-#if SPINDLE_HUANYANG > 0
-    if(modbus)
-        huanyang_init(&modbus_stream);
+    modbus_init(serialInit());
+#if SPINDLE_HUANYANG
+    huanyang_init();
 #endif
-
 #endif
 
     my_plugin_init();
