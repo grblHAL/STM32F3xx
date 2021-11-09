@@ -28,7 +28,7 @@
 // Configuration
 // Uncomment to enable.
 #define USB_SERIAL_CDC       1 // Serial communication via native USB.
-//#define KEYPAD_ENABLE        1 // I2C keypad for jogging etc., requires keypad plugin.
+//#define KEYPAD_ENABLE        1 // Set to 1 for I2C keypad, 2 for other input such as serial data
 //#define ODOMETER_ENABLE      1 // Odometer plugin.
 //#define EEPROM_ENABLE        2 // I2C EEPROM support. Set to 1 for 24LC16(2K), 2 for larger sizes. Requires eeprom plugin.
 //#define EEPROM_IS_FRAM       1 // Uncomment when EEPROM is enabled and chip is FRAM, this to remove write delay.

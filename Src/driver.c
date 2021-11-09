@@ -66,6 +66,12 @@
 #include "flash.h"
 #endif
 
+#if !I2C_STROBE_ENABLE
+#define I2C_STROBE_BIT 0
+#endif
+
+#define DRIVER_IRQMASK (LIMIT_MASK|CONTROL_MASK|I2C_STROBE_BIT)
+
 typedef union {
     uint8_t mask;
     struct {
@@ -98,8 +104,8 @@ static input_signal_t inputpin[] = {
 #ifdef PROBE_PIN
     { .id = Input_Probe,          .port = PROBE_PORT,         .pin = PROBE_PIN,           .group = PinGroup_Probe },
 #endif
-#ifdef KEYPAD_STROBE_PIN
-    { .id = Input_KeypadStrobe,   .port = KEYPAD_PORT,        .pin = KEYPAD_STROBE_PIN,   .group = PinGroup_Keypad },
+#ifdef I2C_STROBE_PIN
+    { .id = Input_KeypadStrobe,   .port = I2C_STROBE_PORT,        .pin = I2C_STROBE_PIN,   .group = PinGroup_Keypad },
 #endif
 #ifdef MODE_SWITCH_PIN
     { .id = Input_ModeSelect,     .port = MODE_PORT,          .pin = MODE_SWITCH_PIN,     .group = PinGroup_MPG },
@@ -172,11 +178,21 @@ static output_signal_t outputpin[] = {
 #endif
 };
 
-#if KEYPAD_ENABLE == 0
-#define KEYPAD_STROBE_BIT 0
-#endif
+#if I2C_STROBE_ENABLE
 
-#define DRIVER_IRQMASK (LIMIT_MASK|CONTROL_MASK|KEYPAD_STROBE_BIT)
+static driver_irq_handler_t i2c_strobe = { .type = IRQ_I2C_Strobe };
+
+static bool irq_claim (irq_type_t irq, uint_fast8_t id, irq_callback_ptr handler)
+{
+    bool ok;
+
+    if((ok = irq == IRQ_I2C_Strobe && i2c_strobe.callback == NULL))
+        i2c_strobe.callback = handler;
+
+    return ok;
+}
+
+#endif
 
 static void spindle_set_speed (uint_fast16_t pwm_value);
 
@@ -1015,7 +1031,7 @@ bool driver_init (void)
     // Enable EEPROM and serial port here for Grbl to be able to configure itself and report any errors
 
     hal.info = "STM32F303";
-    hal.driver_version = "211029";
+    hal.driver_version = "211107";
 #ifdef BOARD_NAME
     hal.board = BOARD_NAME;
 #endif
@@ -1059,6 +1075,9 @@ bool driver_init (void)
 
     hal.irq_enable = __enable_irq;
     hal.irq_disable = __disable_irq;
+#if I2C_STROBE_ENABLE
+    hal.irq_claim = irq_claim;
+#endif
     hal.set_bits_atomic = bitsSetAtomic;
     hal.clear_bits_atomic = bitsClearAtomic;
     hal.set_value_atomic = valueSetAtomic;
@@ -1230,8 +1249,9 @@ void EXTI0_IRQHandler(void)
             DEBOUNCE_TIMER->CR1 |= TIM_CR1_CEN; // Start debounce timer (40ms)
         } else
   #endif
-#elif KEYPAD_STROBE_BIT & (1<<0)
-        keypad_keyclick_handler((KEYPAD_PORT & KEYPAD_STROBE_BIT) == 0);
+#elif I2C_STROBE_ENABLE && (I2C_STROBE_BIT & (1<<0))
+        if(i2c_strobe.callback)
+            i2c_strobe.callback(0, (I2C_STROBE_PORT->IDR & I2C_STROBE_BIT) == 0);
 #else
         if(hal.driver_cap.software_debounce) {
             debounce.limits = On;
@@ -1432,9 +1452,9 @@ void EXTI15_10_IRQHandler(void)
                 hal.limits.interrupt_callback(limitsGetState());
         }
 #endif
-#if KEYPAD_ENABLE
-        if(ifg & KEYPAD_STROBE_BIT)
-            keypad_keyclick_handler((KEYPAD_PORT->IDR & KEYPAD_STROBE_BIT) == 0);
+#if I2C_STROBE_ENABLE
+        if((ifg & I2C_STROBE_BIT) && i2c_strobe.callback)
+            i2c_strobe.callback(0, (I2C_STROBE_PORT->IDR & I2C_STROBE_BIT) == 0);
 #endif
     }
 }
