@@ -23,7 +23,7 @@
 #include "usbd_cdc_if.h"
 
 /* USER CODE BEGIN INCLUDE */
-
+extern  void usbBufferInput (uint8_t *data, uint32_t length);
 /* USER CODE END INCLUDE */
 
 /* Private typedef -----------------------------------------------------------*/

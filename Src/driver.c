@@ -88,9 +88,11 @@ static axes_signals_t next_step_outbits;
 static spindle_pwm_t spindle_pwm;
 static delay_t delay = { .ms = 1, .callback = NULL }; // NOTE: initial ms set to 1 for "resetting" systick timer on startup
 static debounce_t debounce;
+#ifdef PROBE_PIN
 static probe_state_t probe = {
     .connected = On
 };
+#endif
 
 #include "grbl/stepdir_map.h"
 
@@ -105,7 +107,7 @@ static input_signal_t inputpin[] = {
     { .id = Input_Probe,          .port = PROBE_PORT,         .pin = PROBE_PIN,           .group = PinGroup_Probe },
 #endif
 #ifdef I2C_STROBE_PIN
-    { .id = Input_KeypadStrobe,   .port = I2C_STROBE_PORT,        .pin = I2C_STROBE_PIN,   .group = PinGroup_Keypad },
+    { .id = Input_KeypadStrobe,   .port = I2C_STROBE_PORT,    .pin = I2C_STROBE_PIN,      .group = PinGroup_Keypad },
 #endif
 #ifdef MODE_SWITCH_PIN
     { .id = Input_ModeSelect,     .port = MODE_PORT,          .pin = MODE_SWITCH_PIN,     .group = PinGroup_MPG },
@@ -1031,7 +1033,7 @@ bool driver_init (void)
     // Enable EEPROM and serial port here for Grbl to be able to configure itself and report any errors
 
     hal.info = "STM32F303";
-    hal.driver_version = "211107";
+    hal.driver_version = "211110";
 #ifdef BOARD_NAME
     hal.board = BOARD_NAME;
 #endif
@@ -1106,7 +1108,7 @@ bool driver_init (void)
 
   // driver capabilities, used for announcing and negotiating (with Grbl) driver functionality
 
-#ifdef CONTROL_SAFETY_DOOR_PIN
+#ifdef SAFETY_DOOR_PIN
     hal.signals_cap.safety_door_ajar = On;
 #endif
     hal.driver_cap.spindle_dir = On;
@@ -1130,26 +1132,11 @@ bool driver_init (void)
     board_init();
 #endif
 
-#if TRINAMIC_ENABLE
-    trinamic_init();
-#endif
-
-#if KEYPAD_ENABLE
-    keypad_init();
-#endif
-
 #if MODBUS_ENABLE
     modbus_init(serialInit());
-#if SPINDLE_HUANYANG
-    huanyang_init();
-#endif
 #endif
 
-    my_plugin_init();
-
-#if ODOMETER_ENABLE
-    odometer_init(); // NOTE: this *must* be last plugin to be initialized as it claims storage at the end of NVS.
-#endif
+#include "grbl/plugins_init.h"
 
     // No need to move version check before init.
     // Compiler will fail any signature mismatch for existing entries.
