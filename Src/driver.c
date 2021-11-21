@@ -1007,11 +1007,7 @@ static bool driver_setup (settings_t *settings)
 
 #endif
 
-#if N_AXIS > 3
-    IOInitDone = settings->version == 20;
-#else
-    IOInitDone = settings->version == 19;
-#endif
+    IOInitDone = settings->version == 21;
 
     hal.settings_changed(settings);
     hal.spindle.set_state((spindle_state_t){0}, 0.0f);
@@ -1033,7 +1029,7 @@ bool driver_init (void)
     // Enable EEPROM and serial port here for Grbl to be able to configure itself and report any errors
 
     hal.info = "STM32F303";
-    hal.driver_version = "211110";
+    hal.driver_version = "211121";
 #ifdef BOARD_NAME
     hal.board = BOARD_NAME;
 #endif
@@ -1140,7 +1136,7 @@ bool driver_init (void)
 
     // No need to move version check before init.
     // Compiler will fail any signature mismatch for existing entries.
-    return hal.version == 8;
+    return hal.version == 9;
 }
 
 /* interrupt handlers */
