@@ -36,6 +36,28 @@ static stream_rx_buffer_t rxbuf = {0};
 static stream_tx_buffer_t txbuf = {0};
 static enqueue_realtime_command_ptr enqueue_realtime_command = protocol_enqueue_realtime_command;
 
+static io_stream_properties_t serial[] = {
+    {
+      .type = StreamType_Serial,
+      .instance = 0,
+      .flags.claimable = On,
+      .flags.claimed = Off,
+      .flags.connected = On,
+      .flags.can_set_baud = Off,
+      .claim = serialInit
+    }
+};
+
+void serialRegisterStreams (void)
+{
+    static io_stream_details_t streams = {
+        .n_streams = sizeof(serial) / sizeof(io_stream_properties_t),
+        .streams = serial,
+    };
+
+    stream_register_streams(&streams);
+}
+
 //
 // Returns number of free characters in serial input buffer
 //
@@ -158,7 +180,7 @@ static enqueue_realtime_command_ptr serialSetRtHandler (enqueue_realtime_command
     return prev;
 }
 
-const io_stream_t *serialInit (void)
+const io_stream_t *serialInit (uint32_t baud_rate)
 {
     static const io_stream_t stream = {
         .type = StreamType_Serial,
@@ -174,6 +196,11 @@ const io_stream_t *serialInit (void)
         .suspend_read = serialSuspendInput,
         .set_enqueue_rt_handler = serialSetRtHandler
     };
+
+    if(serial[0].flags.claimed || baud_rate != 115200)
+        return NULL;
+
+    serial[0].flags.claimed = On;
 
     GPIO_InitTypeDef GPIO_InitStruct = {0};
 
@@ -198,7 +225,6 @@ const io_stream_t *serialInit (void)
 
     return &stream;
 }
-
 
 void USART_IRQHandler (void)
 {

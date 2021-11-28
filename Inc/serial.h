@@ -29,6 +29,7 @@
 #define RX_BUFFER_HWM 900
 #define RX_BUFFER_LWM 300
 
-const io_stream_t *serialInit (void);
+const io_stream_t *serialInit (uint32_t baud_rate);
+void serialRegisterStreams (void);
 
 /*EOF*/
