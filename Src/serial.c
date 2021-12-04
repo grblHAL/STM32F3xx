@@ -87,36 +87,20 @@ static void serialRxCancel (void)
 }
 
 //
-// Attempt to send a character bypassing buffering
-//
-inline static bool serialPutCNonBlocking (const char c)
-{
-    bool ok;
-
-    if((ok = !(USART->CR1 & USART_CR1_TXEIE) && !(USART->ISR & USART_ISR_TXE)))
-        USART->TDR = c;
-
-    return ok;
-}
-
-//
 // Writes a character to the serial output stream
 //
 static bool serialPutC (const char c)
 {
-//    if(txbuf.head != txbuf.tail || !serialPutCNonBlocking(c)) {           // Try to send character without buffering...
+    uint16_t next_head = BUFNEXT(txbuf.head, txbuf);    // Get pointer to next free slot in buffer
 
-        uint16_t next_head = BUFNEXT(txbuf.head, txbuf);    // .. if not, get pointer to next free slot in buffer
+    while(txbuf.tail == next_head) {                    // While TX buffer full
+        if(!hal.stream_blocking_callback())             // check if blocking for space,
+            return false;                               // exit if not (leaves TX buffer in an inconsistent state)
+    }
 
-        while(txbuf.tail == next_head) {                    // While TX buffer full
-            if(!hal.stream_blocking_callback())             // check if blocking for space,
-                return false;                               // exit if not (leaves TX buffer in an inconsistent state)
-        }
-
-        txbuf.data[txbuf.head] = c;                         // Add data to buffer,
-        txbuf.head = next_head;                             // update head pointer and
-        USART->CR1 |= USART_CR1_TXEIE;                      // enable TX interrupts
-//    }
+    txbuf.data[txbuf.head] = c;                         // Add data to buffer,
+    txbuf.head = next_head;                             // update head pointer and
+    USART->CR1 |= USART_CR1_TXEIE;                      // enable TX interrupts
 
     return true;
 }
@@ -184,7 +168,7 @@ const io_stream_t *serialInit (uint32_t baud_rate)
 {
     static const io_stream_t stream = {
         .type = StreamType_Serial,
-        .connected = true,
+        .state.connected = true,
         .read = serialGetC,
         .write = serialWriteS,
         .write_char = serialPutC,
