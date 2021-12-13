@@ -1029,7 +1029,7 @@ bool driver_init (void)
     // Enable EEPROM and serial port here for Grbl to be able to configure itself and report any errors
 
     hal.info = "STM32F303";
-    hal.driver_version = "211203";
+    hal.driver_version = "211209";
 #ifdef BOARD_NAME
     hal.board = BOARD_NAME;
 #endif
@@ -1083,9 +1083,9 @@ bool driver_init (void)
     hal.enumerate_pins = enumeratePins;
 
 #if USB_SERIAL_CDC
-    memcpy(&hal.stream, usbInit(), sizeof(io_stream_t));
+    stream_connect(usbInit());
 #else
-    memcpy(&hal.stream, serialInit(115200), sizeof(io_stream_t));
+    stream_connect(serialInit(115200));
 #endif
 
 #ifdef I2C_PORT
@@ -1129,10 +1129,6 @@ bool driver_init (void)
 #endif
 
     serialRegisterStreams();
-
-#if MODBUS_ENABLE
-    modbus_init(serialInit(115200));
-#endif
 
 #include "grbl/plugins_init.h"
 
