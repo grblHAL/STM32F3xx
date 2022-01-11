@@ -4,7 +4,7 @@
 
   Part of grblHAL
 
-  Copyright (c) 2019-2021 Terje Io
+  Copyright (c) 2019-2022 Terje Io
 
   Grbl is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -31,6 +31,7 @@
 #include "grbl/limits.h"
 #include "grbl/motor_pins.h"
 #include "grbl/pin_bits_masks.h"
+#include "grbl/state_machine.h"
 
 #ifdef I2C_PORT
 #include "i2c.h"
@@ -109,8 +110,8 @@ static input_signal_t inputpin[] = {
 #ifdef I2C_STROBE_PIN
     { .id = Input_KeypadStrobe,   .port = I2C_STROBE_PORT,    .pin = I2C_STROBE_PIN,      .group = PinGroup_Keypad },
 #endif
-#ifdef MODE_SWITCH_PIN
-    { .id = Input_ModeSelect,     .port = MODE_PORT,          .pin = MODE_SWITCH_PIN,     .group = PinGroup_MPG },
+#ifdef MPG_MODE_PIN
+    { .id = Input_ModeSelect,     .port = MPG_MODE_PORT,          .pin = MPG_MODE_PIN,     .group = PinGroup_MPG },
 #endif
 // Limit input pins must be consecutive in this array
     { .id = Input_LimitX,         .port = X_LIMIT_PORT,       .pin = X_LIMIT_PIN,         .group = PinGroup_Limit },
@@ -204,8 +205,10 @@ static void driver_delay (uint32_t ms, void (*callback)(void))
         // Restart systick...
         SysTick->CTRL &= ~SysTick_CTRL_ENABLE_Msk;
         SysTick->CTRL |= SysTick_CTRL_ENABLE_Msk;
-        if(!(delay.callback = callback))
-            while(delay.ms);
+        if(!(delay.callback = callback)) {
+            while(delay.ms)
+                grbl.on_execute_delay(state_get());
+        }
     } else if(callback)
         callback();
 }
@@ -1029,7 +1032,7 @@ bool driver_init (void)
     // Enable EEPROM and serial port here for Grbl to be able to configure itself and report any errors
 
     hal.info = "STM32F303";
-    hal.driver_version = "211209";
+    hal.driver_version = "211211";
 #ifdef BOARD_NAME
     hal.board = BOARD_NAME;
 #endif
@@ -1085,7 +1088,7 @@ bool driver_init (void)
 #if USB_SERIAL_CDC
     stream_connect(usbInit());
 #else
-    stream_connect(serialInit(115200));
+    stream_connect(serialInit(BAUD_RATE));
 #endif
 
 #ifdef I2C_PORT
