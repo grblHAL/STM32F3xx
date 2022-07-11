@@ -101,7 +101,7 @@
 #define RESET_PIN               5
 #define FEED_HOLD_PIN           14
 #define CYCLE_START_PIN         15
-#ifdef ENABLE_SAFETY_DOOR_INPUT_PIN
+#if SAFETY_DOOR_ENABLE
 #define SAFETY_DOOR_PIN         8
 #endif
 #define CONTROL_INMODE          GPIO_MAP

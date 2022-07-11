@@ -3,7 +3,7 @@
 
   Part of grblHAL
 
-  Copyright (c) 2021 Terje Io
+  Copyright (c) 2021-2022 Terje Io
 
   Grbl is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -31,7 +31,7 @@
 //#define SAFETY_DOOR_ENABLE   1 // Enable safety door input.
 //#define KEYPAD_ENABLE        1 // Set to 1 for I2C keypad, 2 for other input such as serial data
 //#define ODOMETER_ENABLE      1 // Odometer plugin.
-//#define EEPROM_ENABLE        2 // I2C EEPROM support. Set to 1 for 24LC16(2K), 2 for larger sizes. Requires eeprom plugin.
+//#define EEPROM_ENABLE        2 // I2C EEPROM support. Set to 1 for 24LC16 (2K), 3 for 24C32 (4K - 32 byte page) and 2 for other sizes. Enables eeprom plugin.
 //#define EEPROM_IS_FRAM       1 // Uncomment when EEPROM is enabled and chip is FRAM, this to remove write delay.
 
 /**/

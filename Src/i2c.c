@@ -3,7 +3,7 @@
 
   Part of grblHAL driver for STM32F3xx
 
-  Copyright (c) 2018-2021 Terje Io
+  Copyright (c) 2018-2022 Terje Io
 
   Grbl is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -65,6 +65,22 @@ void i2c_init (void)
 
     HAL_NVIC_EnableIRQ(I2C1_EV_IRQn);
     HAL_NVIC_EnableIRQ(I2C1_ER_IRQn);
+
+    static const periph_pin_t scl = {
+        .function = Output_SCK,
+        .group = PinGroup_I2C,
+        .port = GPIOB,
+        .pin = 8,
+        .mode = { .mask = PINMODE_OD }
+    };
+
+    static const periph_pin_t sda = {
+        .function = Bidirectional_SDA,
+        .group = PinGroup_I2C,
+        .port = GPIOB,
+        .pin = 9,
+        .mode = { .mask = PINMODE_OD }
+    };
 #endif
 
 #if I2C_PORT == 2
@@ -81,7 +97,26 @@ void i2c_init (void)
 
     HAL_NVIC_EnableIRQ(I2C2_EV_IRQn);
     HAL_NVIC_EnableIRQ(I2C2_ER_IRQn);
+
+    static const periph_pin_t scl = {
+        .function = Output_SCK,
+        .group = PinGroup_I2C,
+        .port = GPIOA,
+        .pin = 9,
+        .mode = { .mask = PINMODE_OD }
+    };
+
+    static const periph_pin_t sda = {
+        .function = Bidirectional_SDA,
+        .group = PinGroup_I2C,
+        .port = GPIOA,
+        .pin = 10,
+        .mode = { .mask = PINMODE_OD }
+    };
 #endif
+
+    hal.periph_port.register_pin(&scl);
+    hal.periph_port.register_pin(&sda);
 
     HAL_I2CEx_ConfigAnalogFilter(&i2c_port, I2C_ANALOGFILTER_ENABLE);
     HAL_I2CEx_ConfigDigitalFilter(&i2c_port, 0);
@@ -119,17 +154,20 @@ nvs_transfer_result_t i2c_nvs_transfer (nvs_transfer_t *i2c, bool read)
 
 //    while (HAL_I2C_IsDeviceReady(&i2c_port, (uint16_t)(0xA0), 3, 100) != HAL_OK);
 
+    HAL_StatusTypeDef ret;
+
     if(read)
-        HAL_I2C_Mem_Read(&i2c_port, i2c->address << 1, i2c->word_addr, i2c->word_addr_bytes == 2 ? I2C_MEMADD_SIZE_16BIT : I2C_MEMADD_SIZE_8BIT, i2c->data, i2c->count, 100);
+        ret = HAL_I2C_Mem_Read(&i2c_port, i2c->address << 1, i2c->word_addr, i2c->word_addr_bytes == 2 ? I2C_MEMADD_SIZE_16BIT : I2C_MEMADD_SIZE_8BIT, i2c->data, i2c->count, 100);
     else {
-        HAL_I2C_Mem_Write(&i2c_port, i2c->address << 1, i2c->word_addr, i2c->word_addr_bytes == 2 ? I2C_MEMADD_SIZE_16BIT : I2C_MEMADD_SIZE_8BIT, i2c->data, i2c->count, 100);
+        ret = HAL_I2C_Mem_Write(&i2c_port, i2c->address << 1, i2c->word_addr, i2c->word_addr_bytes == 2 ? I2C_MEMADD_SIZE_16BIT : I2C_MEMADD_SIZE_8BIT, i2c->data, i2c->count, 100);
 #if !EEPROM_IS_FRAM
         hal.delay_ms(5, NULL);
 #endif
     }
+
     i2c->data += i2c->count;
 
-    return NVS_TransferResult_OK;
+    return ret == HAL_OK ? NVS_TransferResult_OK : NVS_TransferResult_Failed;
 }
 
 #endif

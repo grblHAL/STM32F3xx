@@ -22,6 +22,7 @@
 */
 
 #include <math.h>
+#include <stdlib.h>
 #include <string.h>
 
 #include "main.h"
@@ -89,6 +90,7 @@ static axes_signals_t next_step_outbits;
 static spindle_pwm_t spindle_pwm;
 static delay_t delay = { .ms = 1, .callback = NULL }; // NOTE: initial ms set to 1 for "resetting" systick timer on startup
 static debounce_t debounce;
+static periph_signal_t *periph_pins = NULL;
 #ifdef PROBE_PIN
 static probe_state_t probe = {
     .connected = On
@@ -652,11 +654,9 @@ void settings_changed (settings_t *settings)
 
     if(IOInitDone) {
 
-        GPIO_InitTypeDef GPIO_Init = {0};
-
-        GPIO_Init.Speed = GPIO_SPEED_FREQ_HIGH;
-
-        stepperEnable(settings->steppers.deenergize);
+        GPIO_InitTypeDef GPIO_Init = {
+            .Speed = GPIO_SPEED_FREQ_HIGH
+        };
 
         if(hal.spindle.get_state == spindleGetState)
             spindleConfig();
@@ -902,6 +902,19 @@ static void enumeratePins (bool low_level, pin_info_ptr pin_info)
         pin_info(&pin);
     };
 
+    periph_signal_t *ppin = periph_pins;
+
+    if(ppin) do {
+        pin.pin = ppin->pin.pin;
+        pin.function = ppin->pin.function;
+        pin.group = ppin->pin.group;
+        pin.port = low_level ? ppin->pin.port : (void *)port2char(ppin->pin.port);
+        pin.mode = ppin->pin.mode;
+        pin.description = ppin->pin.description;
+
+        pin_info(&pin);
+    } while((ppin = ppin->next));
+
 #ifdef SPINDLE_PWM_TIMER_N
     pin.pin = SPINDLE_PWM_PIN;
     pin.function = Output_SpindlePWM;
@@ -910,6 +923,39 @@ static void enumeratePins (bool low_level, pin_info_ptr pin_info)
     pin.description = NULL;
     pin_info(&pin);
 #endif
+}
+
+void registerPeriphPin (const periph_pin_t *pin)
+{
+    periph_signal_t *add_pin = malloc(sizeof(periph_signal_t));
+
+    if(!add_pin)
+        return;
+
+    memcpy(&add_pin->pin, pin, sizeof(periph_pin_t));
+    add_pin->next = NULL;
+
+    if(periph_pins == NULL) {
+        periph_pins = add_pin;
+    } else {
+        periph_signal_t *last = periph_pins;
+        while(last->next)
+            last = last->next;
+        last->next = add_pin;
+    }
+}
+
+void setPeriphPinDescription (const pin_function_t function, const pin_group_t group, const char *description)
+{
+    periph_signal_t *ppin = periph_pins;
+
+    if(ppin) do {
+        if(ppin->pin.function == function && ppin->pin.group == group) {
+            ppin->pin.description = description;
+            ppin = NULL;
+        } else
+            ppin = ppin->next;
+    } while(ppin);
 }
 
 // Initializes MCU peripherals for Grbl use
@@ -1029,7 +1075,7 @@ bool driver_init (void)
     // Enable EEPROM and serial port here for Grbl to be able to configure itself and report any errors
 
     hal.info = "STM32F303";
-    hal.driver_version = "220325";
+    hal.driver_version = "220710";
 #ifdef BOARD_NAME
     hal.board = BOARD_NAME;
 #endif
@@ -1069,6 +1115,8 @@ bool driver_init (void)
     hal.set_value_atomic = valueSetAtomic;
     hal.get_elapsed_ticks = getElapsedTicks;
     hal.enumerate_pins = enumeratePins;
+    hal.periph_port.register_pin = registerPeriphPin;
+    hal.periph_port.set_pin_description = setPeriphPinDescription;
 
 #if USB_SERIAL_CDC
     stream_connect(usbInit());

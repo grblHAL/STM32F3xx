@@ -82,7 +82,7 @@
 #define RESET_PIN               6
 #define FEED_HOLD_PIN           7
 #define CYCLE_START_PIN         8
-#ifdef ENABLE_SAFETY_DOOR_INPUT_PIN
+#if SAFETY_DOOR_ENABLE
 #define SAFETY_DOOR_PIN         9
 #endif
 #define CONTROL_INMODE          GPIO_SHIFT6
