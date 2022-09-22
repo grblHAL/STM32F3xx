@@ -579,7 +579,7 @@ bool spindleConfig (void)
         hal.spindle.set_state = spindleSetState;
     }
 
-    spindle_update_caps(hal.spindle.cap.variable);
+    spindle_update_caps(hal.spindle.cap.variable ? &spindle_pwm : NULL);
 
     return true;
 }
@@ -1075,7 +1075,7 @@ bool driver_init (void)
     // Enable EEPROM and serial port here for Grbl to be able to configure itself and report any errors
 
     hal.info = "STM32F303";
-    hal.driver_version = "220907";
+    hal.driver_version = "220922";
 #ifdef BOARD_NAME
     hal.board = BOARD_NAME;
 #endif
