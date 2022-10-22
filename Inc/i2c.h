@@ -27,8 +27,8 @@
 
 #if TRINAMIC_ENABLE == 2130 && TRINAMIC_I2C
 
-#include "trinamic\trinamic2130.h"
-#include "trinamic\TMC2130_I2C_map.h"
+#include "trinamic/trinamic2130.h"
+#include "trinamic/TMC2130_I2C_map.h"
 
 #define I2C_ADR_I2CBRIDGE 0x47
 
