@@ -1054,7 +1054,7 @@ static bool driver_setup (settings_t *settings)
 
 #endif
 
-    IOInitDone = settings->version == 21;
+    IOInitDone = settings->version == 22;
 
     hal.settings_changed(settings);
 
@@ -1075,7 +1075,7 @@ bool driver_init (void)
     // Enable EEPROM and serial port here for Grbl to be able to configure itself and report any errors
 
     hal.info = "STM32F303";
-    hal.driver_version = "220922";
+    hal.driver_version = "230125";
 #ifdef BOARD_NAME
     hal.board = BOARD_NAME;
 #endif
