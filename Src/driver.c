@@ -4,7 +4,7 @@
 
   Part of grblHAL
 
-  Copyright (c) 2019-2022 Terje Io
+  Copyright (c) 2019-2023 Terje Io
 
   Grbl is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -86,6 +86,7 @@ typedef union {
 extern __IO uint32_t uwTick;
 static uint32_t pulse_length, pulse_delay;
 static bool pwmEnabled = false, IOInitDone = false;
+static spindle_id_t spindle_id = -1;
 static axes_signals_t next_step_outbits;
 static spindle_pwm_t spindle_pwm;
 static delay_t delay = { .ms = 1, .callback = NULL }; // NOTE: initial ms set to 1 for "resetting" systick timer on startup
@@ -527,13 +528,16 @@ static void spindlePulseOn (uint_fast16_t pulse_length)
 
 #endif
 
-bool spindleConfig (void)
+bool spindleConfig (spindle_ptrs_t *spindle)
 {
+    if(spindle == NULL)
+        return false;
+
     uint32_t prescaler = settings.spindle.pwm_freq > 4000.0f ? 1 : (settings.spindle.pwm_freq > 200.0f ? 12 : 25);
 
-    if(((hal.spindle.cap.variable = !settings.spindle.flags.pwm_disable && spindle_precompute_pwm_values(&spindle_pwm, SystemCoreClock / prescaler)))) {
+    if(((spindle->cap.variable = !settings.spindle.flags.pwm_disable && spindle_precompute_pwm_values(spindle, &spindle_pwm, SystemCoreClock / prescaler)))) {
 
-        hal.spindle.set_state = spindleSetStateVariable;
+        spindle->set_state = spindleSetStateVariable;
 
         SPINDLE_PWM_TIMER->CR1 &= ~TIM_CR1_CEN;
 
@@ -575,11 +579,11 @@ bool spindleConfig (void)
 
     } else {
         if(pwmEnabled)
-            hal.spindle.set_state((spindle_state_t){0}, 0.0f);
-        hal.spindle.set_state = spindleSetState;
+            spindle->set_state((spindle_state_t){0}, 0.0f);
+        spindle->set_state = spindleSetState;
     }
 
-    spindle_update_caps(hal.spindle.cap.variable ? &spindle_pwm : NULL);
+    spindle_update_caps(spindle, spindle->cap.variable ? &spindle_pwm : NULL);
 
     return true;
 }
@@ -642,7 +646,7 @@ static uint32_t getElapsedTicks (void)
 }
 
 // Configures peripherals when settings are initialized or changed
-void settings_changed (settings_t *settings)
+void settings_changed (settings_t *settings, settings_changed_flags_t changed)
 {
 
 #if USE_STEPDIR_MAP
@@ -658,8 +662,11 @@ void settings_changed (settings_t *settings)
             .Speed = GPIO_SPEED_FREQ_HIGH
         };
 
-        if(hal.spindle.get_state == spindleGetState)
-            spindleConfig();
+        if(changed.spindle) {
+            spindleConfig(spindle_get_hal(spindle_id, SpindleHAL_Configured));
+            if(spindle_id == spindle_get_default())
+                spindle_select(spindle_id);
+        }
 
         pulse_length = (uint32_t)(10.0f * (settings->steppers.pulse_microseconds - STEP_PULSE_LATENCY)) - 1;
 
@@ -1056,7 +1063,7 @@ static bool driver_setup (settings_t *settings)
 
     IOInitDone = settings->version == 22;
 
-    hal.settings_changed(settings);
+    hal.settings_changed(settings, (settings_changed_flags_t){0});
 
     stepperSetDirOutputs((axes_signals_t){0});
 
@@ -1075,7 +1082,8 @@ bool driver_init (void)
     // Enable EEPROM and serial port here for Grbl to be able to configure itself and report any errors
 
     hal.info = "STM32F303";
-    hal.driver_version = "230125";
+    hal.driver_version = "230129";
+    hal.driver_url = GRBL_URL "/STM32F3xx";
 #ifdef BOARD_NAME
     hal.board = BOARD_NAME;
 #endif
@@ -1157,7 +1165,7 @@ bool driver_init (void)
         .get_state = spindleGetState
     };
 
-    spindle_register(&spindle, "PWM");
+    spindle_id = spindle_register(&spindle, "PWM");
 
   // driver capabilities, used for announcing and negotiating (with Grbl) driver functionality
 
