@@ -23,7 +23,8 @@
 #include "usbd_cdc_if.h"
 
 /* USER CODE BEGIN INCLUDE */
-extern  void usbBufferInput (uint8_t *data, uint32_t length);
+#include "driver.h"
+#include "usb_serial.h"
 /* USER CODE END INCLUDE */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -227,7 +228,8 @@ static int8_t CDC_Control_FS(uint8_t cmd, uint8_t* pbuf, uint16_t length)
     break;
 
     case CDC_SET_CONTROL_LINE_STATE:
-
+        usb_linestate.pin.value = pbuf[2];
+        usb_linestate.timestamp = hal.get_elapsed_ticks();
     break;
 
     case CDC_SEND_BREAK:
