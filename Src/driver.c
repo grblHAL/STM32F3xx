@@ -254,8 +254,9 @@ static void stepperWakeUp (void)
 {
     stepperEnable((axes_signals_t){AXES_BITMASK});
 
-    STEPPER_TIMER->ARR = 5000; // delay to allow drivers time to wake up
+    STEPPER_TIMER->ARR = hal.f_step_timer / 500; // ~2ms delay to allow drivers time to wake up.
     STEPPER_TIMER->EGR = TIM_EGR_UG;
+    STEPPER_TIMER->SR = ~TIM_SR_UIF;
     STEPPER_TIMER->CR1 |= (TIM_CR1_CEN|TIM_CR1_ARPE);
 }
 
@@ -412,7 +413,7 @@ static void probeConfigure (bool is_probe_away, bool probing)
 }
 
 // Returns the probe connected and triggered pin states.
-probe_state_t probeGetState (void)
+static probe_state_t probeGetState (void)
 {
     probe_state_t state = {0};
 
