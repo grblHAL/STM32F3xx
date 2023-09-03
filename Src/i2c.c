@@ -121,6 +121,7 @@ void i2c_init (void)
 }
 
 #if I2C_PORT == 1
+
 void I2C1_EV_IRQHandler(void)
 {
   HAL_I2C_EV_IRQHandler(&i2c_port);
@@ -130,7 +131,9 @@ void I2C1_ER_IRQHandler(void)
 {
   HAL_I2C_ER_IRQHandler(&i2c_port);
 }
+
 #else
+
 void I2C2_EV_IRQHandler(void)
 {
   HAL_I2C_EV_IRQHandler(&i2c_port);
@@ -140,7 +143,6 @@ void I2C2_ER_IRQHandler(void)
 {
   HAL_I2C_ER_IRQHandler(&i2c_port);
 }
-#endif
 
 #endif
 
@@ -187,7 +189,7 @@ nvs_transfer_result_t i2c_nvs_transfer (nvs_transfer_t *i2c, bool read)
     return ret == HAL_OK ? NVS_TransferResult_OK : NVS_TransferResult_Failed;
 }
 
-#endif
+#endif // EEPROM_ENABLE
 
 void HAL_I2C_MasterRxCpltCallback(I2C_HandleTypeDef *hi2c)
 {
@@ -249,4 +251,6 @@ void I2C_DriverInit (TMC_io_driver_t *driver)
     driver->ReadRegister = TMC_I2C_ReadRegister;
 }
 
-#endif
+#endif // TRINAMIC_ENABLE && TRINAMIC_I2C
+
+#endif // I2C_PORT
