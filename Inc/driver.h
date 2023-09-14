@@ -166,5 +166,6 @@ void board_init (void);
 #endif
 
 bool driver_init (void);
+void gpio_irq_enable (const input_signal_t *input, pin_irq_mode_t irq_mode);
 
 #endif // __DRIVER_H__
