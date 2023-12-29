@@ -1162,7 +1162,7 @@ bool driver_init (void)
     // Enable EEPROM and serial port here for Grbl to be able to configure itself and report any errors
 
     hal.info = "STM32F303";
-    hal.driver_version = "231209";
+    hal.driver_version = "231227";
     hal.driver_url = GRBL_URL "/STM32F3xx";
 #ifdef BOARD_NAME
     hal.board = BOARD_NAME;
@@ -1335,6 +1335,10 @@ bool driver_init (void)
         ioports_init_analog(NULL, &aux_analog_out);
 #endif
 */
+
+#if SAFETY_DOOR_ENABLE
+    aux_ctrl[AuxCtrl_SafetyDoor].enabled = false; // stop compiler warning
+#endif
 
 #ifdef HAS_BOARD_INIT
     board_init();
