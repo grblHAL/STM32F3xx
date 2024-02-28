@@ -1339,10 +1339,6 @@ bool driver_init (void)
 #endif
 */
 
-#if SAFETY_DOOR_ENABLE
-    aux_ctrl[AuxCtrl_SafetyDoor].enabled = false; // stop compiler warning
-#endif
-
 #ifdef HAS_BOARD_INIT
     board_init();
 #endif
