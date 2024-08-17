@@ -52,10 +52,6 @@
 #include "eeprom/eeprom.h"
 #endif
 
-#if KEYPAD_ENABLE
-#include "keypad/keypad.h"
-#endif
-
 #if ODOMETER_ENABLE
 #include "odometer/odometer.h"
 #endif
@@ -1165,7 +1161,7 @@ bool driver_init (void)
     // Enable EEPROM and serial port here for Grbl to be able to configure itself and report any errors
 
     hal.info = "STM32F303";
-    hal.driver_version = "240404";
+    hal.driver_version = "240817";
     hal.driver_url = GRBL_URL "/STM32F3xx";
 #ifdef BOARD_NAME
     hal.board = BOARD_NAME;
@@ -1360,8 +1356,7 @@ bool driver_init (void)
 // Main stepper driver
 void STEPPER_TIMER_IRQHandler (void)
 {
-    if (STEPPER_TIMER->SR & TIM_SR_UIF)     // check interrupt source
-    {
+    if (STEPPER_TIMER->SR & TIM_SR_UIF) {   // check interrupt source
         STEPPER_TIMER->SR = ~TIM_SR_UIF;    // clear UIF flag
         hal.stepper.interrupt_callback();
     }
@@ -1389,8 +1384,7 @@ void PULSE_TIMER_IRQHandler (void)
 {
     PULSE_TIMER->SR &= ~TIM_SR_UIF;                 // Clear UIF flag
 
-    if (PULSE_TIMER->ARR == pulse_delay)            // Delayed step pulse?
-    {
+    if (PULSE_TIMER->ARR == pulse_delay) {          // Delayed step pulse?
         PULSE_TIMER->ARR = pulse_length;
         stepperSetStepOutputs(next_step_outbits);   // begin step pulse
         PULSE_TIMER->EGR = TIM_EGR_UG;
