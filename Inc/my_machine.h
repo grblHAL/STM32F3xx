@@ -28,7 +28,7 @@
 // Configuration
 // Uncomment to enable.
 #define USB_SERIAL_CDC       1 // Serial communication via native USB.
-#define SAFETY_DOOR_ENABLE   1 // Enable safety door input.
+//#define SAFETY_DOOR_ENABLE   1 // Enable safety door input.
 //#define KEYPAD_ENABLE        2 // 1: uses a I2C keypad for input.
                                  // 2: uses a serial stream for input.
 //#define ODOMETER_ENABLE      1 // Odometer plugin.

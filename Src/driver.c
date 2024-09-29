@@ -241,7 +241,7 @@ static void driver_delay (uint32_t ms, void (*callback)(void))
 }
 
 // Enable/disable stepper motors
-static void stepperEnable (axes_signals_t enable)
+static void stepperEnable (axes_signals_t enable, bool hold)
 {
     enable.mask ^= settings.steppers.enable_invert.mask;
 #if !TRINAMIC_MOTOR_ENABLE
@@ -276,7 +276,7 @@ static void stepperEnable (axes_signals_t enable)
 // Starts stepper driver ISR timer and forces a stepper driver interrupt callback
 static void stepperWakeUp (void)
 {
-    hal.stepper.enable((axes_signals_t){AXES_BITMASK});
+    hal.stepper.enable((axes_signals_t){AXES_BITMASK}, false);
 
     STEPPER_TIMER->ARR = hal.f_step_timer / 500; // ~2ms delay to allow drivers time to wake up.
     STEPPER_TIMER->EGR = TIM_EGR_UG;
@@ -1161,7 +1161,7 @@ bool driver_init (void)
     // Enable EEPROM and serial port here for Grbl to be able to configure itself and report any errors
 
     hal.info = "STM32F303";
-    hal.driver_version = "240817";
+    hal.driver_version = "240928";
     hal.driver_url = GRBL_URL "/STM32F3xx";
 #ifdef BOARD_NAME
     hal.board = BOARD_NAME;
@@ -1229,40 +1229,50 @@ bool driver_init (void)
 
  #if DRIVER_SPINDLE_PWM_ENABLE
 
-   static const spindle_ptrs_t spindle = {
-       .type = SpindleType_PWM,
-       .config = spindleConfig,
-       .set_state = spindleSetStateVariable,
-       .get_state = spindleGetState,
-       .get_pwm = spindleGetPWM,
-       .update_pwm = spindleSetSpeed,
+    static const spindle_ptrs_t spindle = {
+        .type = SpindleType_PWM,
+#if DRIVER_SPINDLE_DIR_ENABLE
+        .ref_id = SPINDLE_PWM0,
+#else
+        .ref_id = SPINDLE_PWM0_NODIR,
+#endif
+        .config = spindleConfig,
+        .set_state = spindleSetStateVariable,
+        .get_state = spindleGetState,
+        .get_pwm = spindleGetPWM,
+        .update_pwm = spindleSetSpeed,
   #if PPI_ENABLE
-       .pulse_on = spindlePulseOn,
+        .pulse_on = spindlePulseOn,
   #endif
-       .cap = {
-           .gpio_controlled = On,
-           .variable = On,
-           .laser = On,
-           .pwm_invert = On,
+        .cap = {
+            .gpio_controlled = On,
+            .variable = On,
+            .laser = On,
+            .pwm_invert = On,
   #if DRIVER_SPINDLE_DIR_ENABLE
-           .direction = On
+            .direction = On
   #endif
-       }
-   };
+        }
+    };
 
  #else
 
-   static const spindle_ptrs_t spindle = {
-       .type = SpindleType_Basic,
-       .set_state = spindleSetState,
-       .get_state = spindleGetState,
-       .cap = {
-           .gpio_controlled = On,
+    static const spindle_ptrs_t spindle = {
+        .type = SpindleType_Basic,
+#if DRIVER_SPINDLE_DIR_ENABLE
+        .ref_id = SPINDLE_ONOFF0_DIR,
+#else
+        .ref_id = SPINDLE_ONOFF0,
+#endif
+        .set_state = spindleSetState,
+        .get_state = spindleGetState,
+        .cap = {
+            .gpio_controlled = On,
   #if DRIVER_SPINDLE_DIR_ENABLE
            .direction = On
-  #endif
-       }
-   };
+  # endif
+        }
+    };
 
  #endif
 
