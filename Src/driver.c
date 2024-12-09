@@ -465,18 +465,18 @@ static probe_state_t probeGetState (void)
 
 inline static void spindle_off (void)
 {
-    DIGITAL_OUT(SPINDLE_ENABLE_PORT, SPINDLE_ENABLE_BIT, settings.spindle.invert.on);
+    DIGITAL_OUT(SPINDLE_ENABLE_PORT, SPINDLE_ENABLE_BIT, settings.pwm_spindle.invert.on);
 }
 
 inline static void spindle_on (void)
 {
-    DIGITAL_OUT(SPINDLE_ENABLE_PORT, SPINDLE_ENABLE_BIT, !settings.spindle.invert.on);
+    DIGITAL_OUT(SPINDLE_ENABLE_PORT, SPINDLE_ENABLE_BIT, !settings.pwm_spindle.invert.on);
 }
 
 inline static void spindle_dir (bool ccw)
 {
 #ifdef SPINDLE_DIRECTION_PIN
-    DIGITAL_OUT(SPINDLE_DIRECTION_PORT, SPINDLE_DIRECTION_BIT, ccw ^ settings.spindle.invert.ccw);
+    DIGITAL_OUT(SPINDLE_DIRECTION_PORT, SPINDLE_DIRECTION_BIT, ccw ^ settings.pwm_spindle.invert.ccw);
 #else
     UNUSED(ccw);
 #endif
@@ -505,19 +505,19 @@ static void spindleSetSpeed (spindle_ptrs_t *spindle, uint_fast16_t pwm_value)
     if(pwm_value == spindle->context.pwm->off_value) {
         pwmEnabled = false;
         if(spindle->context.pwm->settings->flags.enable_rpm_controlled) {
-            if(spindle->context.pwm->cloned)
+            if(spindle->context.pwm->flags.cloned)
                 spindle_dir(false);
             else
                 spindle_off();
         }
-        if(spindle->context.pwm->always_on) {
+        if(spindle->context.pwm->flags.always_on) {
             SPINDLE_PWM_TIMER->CCR1 = spindle->context.pwm->off_value;
             SPINDLE_PWM_TIMER->BDTR |= TIM_BDTR_MOE;
         } else
         	SPINDLE_PWM_TIMER->BDTR &= ~TIM_BDTR_MOE; // Set PWM output low
     } else {
         if(!pwmEnabled) {
-            if(spindle->context.pwm->cloned)
+            if(spindle->context.pwm->flags.cloned)
                 spindle_dir(true);
             else
                 spindle_on();
@@ -537,7 +537,7 @@ static uint_fast16_t spindleGetPWM (spindle_ptrs_t *spindle, float rpm)
 static void spindleSetStateVariable (spindle_ptrs_t *spindle, spindle_state_t state, float rpm)
 {
 #ifdef SPINDLE_DIRECTION_PIN
-    if(state.on || spindle->context.pwm->cloned)
+    if(state.on || spindle->context.pwm->flags.cloned)
         spindle_dir(state.ccw);
 #endif
     if(!spindle->context.pwm->settings->flags.enable_rpm_controlled) {
@@ -547,7 +547,7 @@ static void spindleSetStateVariable (spindle_ptrs_t *spindle, spindle_state_t st
             spindle_off();
     }
 
-    spindleSetSpeed(spindle, state.on || (state.ccw && spindle->context.pwm->cloned)
+    spindleSetSpeed(spindle, state.on || (state.ccw && spindle->context.pwm->flags.cloned)
                               ? spindle->context.pwm->compute_value(spindle->context.pwm, rpm, false)
                               : spindle->context.pwm->off_value);
 }
@@ -569,9 +569,9 @@ bool spindleConfig (spindle_ptrs_t *spindle)
     if(spindle == NULL)
         return false;
 
-    uint32_t prescaler = settings.spindle.pwm_freq > 4000.0f ? 1 : (settings.spindle.pwm_freq > 200.0f ? 12 : 25);
+    uint32_t prescaler = settings.pwm_spindle.pwm_freq > 4000.0f ? 1 : (settings.pwm_spindle.pwm_freq > 200.0f ? 12 : 25);
 
-    if((spindle_precompute_pwm_values(spindle, &spindle_pwm, &settings.spindle, SystemCoreClock / prescaler))) {
+    if((spindle_precompute_pwm_values(spindle, &spindle_pwm, &settings.pwm_spindle, SystemCoreClock / prescaler))) {
 
         spindle->set_state = spindleSetStateVariable;
 
@@ -593,7 +593,7 @@ bool spindleConfig (spindle_ptrs_t *spindle)
         SPINDLE_PWM_TIMER->CCR1 = 0;
         SPINDLE_PWM_TIMER->BDTR |= TIM_BDTR_OSSR|TIM_BDTR_OSSI;
 #if SPINDLE_PWM_PIN == 7
-        if(settings->spindle.invert.pwm) {
+        if(settings->pwm_spindle.invert.pwm) {
             SPINDLE_PWM_TIMER->CCER |= TIM_CCER_CC1NP;
             SPINDLE_PWM_TIMER->CR2 |= TIM_CR2_OIS1N;
         } else {
@@ -602,7 +602,7 @@ bool spindleConfig (spindle_ptrs_t *spindle)
         }
         SPINDLE_PWM_TIMER->CCER |= TIM_CCER_CC1NE;
 #else
-        if(settings.spindle.invert.pwm) {
+        if(settings.pwm_spindle.invert.pwm) {
             SPINDLE_PWM_TIMER->CCER |= TIM_CCER_CC1P;
             SPINDLE_PWM_TIMER->CR2 |= TIM_CR2_OIS1;
         } else {
@@ -630,7 +630,7 @@ bool spindleConfig (spindle_ptrs_t *spindle)
 
 static spindle_state_t spindleGetState (spindle_ptrs_t *spindle)
 {
-    spindle_state_t state = { settings.spindle.invert.mask };
+    spindle_state_t state = { settings.pwm_spindle.invert.mask };
 
     UNUSED(spindle);
 
@@ -638,7 +638,7 @@ static spindle_state_t spindleGetState (spindle_ptrs_t *spindle)
 #ifdef SPINDLE_DIRECTION_PIN
     state.ccw = (SPINDLE_DIRECTION_PORT->IDR & SPINDLE_DIRECTION_BIT) != 0;
 #endif
-    state.value ^= settings.spindle.invert.mask;
+    state.value ^= settings.pwm_spindle.invert.mask;
 
     return state;
 }
@@ -648,7 +648,7 @@ static spindle_state_t spindleGetState (spindle_ptrs_t *spindle)
 // Start/stop coolant (and mist if enabled)
 static void coolantSetState (coolant_state_t mode)
 {
-    mode.value ^= settings.coolant_invert.mask;
+    mode.value ^= settings.coolant.invert.mask;
     DIGITAL_OUT(COOLANT_FLOOD_PORT, COOLANT_FLOOD_BIT, mode.flood);
 #ifdef COOLANT_MIST_PIN
     DIGITAL_OUT(COOLANT_MIST_PORT, COOLANT_MIST_BIT, mode.mist);
@@ -658,13 +658,13 @@ static void coolantSetState (coolant_state_t mode)
 // Returns coolant state in a coolant_state_t variable
 static coolant_state_t coolantGetState (void)
 {
-    coolant_state_t state = (coolant_state_t){settings.coolant_invert.mask};
+    coolant_state_t state = (coolant_state_t){settings.coolant.invert.mask};
 
     state.flood = (COOLANT_FLOOD_PORT->IDR & COOLANT_FLOOD_BIT) != 0;
 #ifdef COOLANT_MIST_PIN
     state.mist  = (COOLANT_MIST_PORT->IDR & COOLANT_MIST_BIT) != 0;
 #endif
-    state.value ^= settings.coolant_invert.mask;
+    state.value ^= settings.coolant.invert.mask;
 
     return state;
 }
@@ -1140,7 +1140,7 @@ static bool driver_setup (settings_t *settings)
 
 #endif
 
-    IOInitDone = settings->version.id == 22;
+    IOInitDone = settings->version.id == 23;
 
     hal.settings_changed(settings, (settings_changed_flags_t){0});
 
@@ -1161,7 +1161,7 @@ bool driver_init (void)
     // Enable EEPROM and serial port here for Grbl to be able to configure itself and report any errors
 
     hal.info = "STM32F303";
-    hal.driver_version = "240928";
+    hal.driver_version = "241208";
     hal.driver_url = GRBL_URL "/STM32F3xx";
 #ifdef BOARD_NAME
     hal.board = BOARD_NAME;
