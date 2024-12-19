@@ -54,6 +54,27 @@ void serialRegisterStreams (void)
         .streams = serial,
     };
 
+    static const periph_pin_t tx0 = {
+        .function = Output_TX,
+        .group = PinGroup_UART1,
+        .port  = GPIOB,
+        .pin   = 10,
+        .mode  = { .mask = PINMODE_OUTPUT },
+        .description = "UART1"
+    };
+
+    static const periph_pin_t rx0 = {
+        .function = Input_RX,
+        .group = PinGroup_UART1,
+        .port  = GPIOB,
+        .pin   = 11,
+        .mode  = { .mask = PINMODE_NONE },
+        .description = "UART1"
+    };
+
+    hal.periph_port.register_pin(&rx0);
+    hal.periph_port.register_pin(&tx0);
+
     stream_register_streams(&streams);
 }
 
