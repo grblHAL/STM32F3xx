@@ -3,20 +3,20 @@
 
   Part of grblHAL driver for STM32F3xx
 
-  Copyright (c) 2018-2023 Terje Io
+  Copyright (c) 2018-2025 Terje Io
 
-  Grbl is free software: you can redistribute it and/or modify
+  grblHAL is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
   the Free Software Foundation, either version 3 of the License, or
   (at your option) any later version.
 
-  Grbl is distributed in the hope that it will be useful,
+  grblHAL is distributed in the hope that it will be useful,
   but WITHOUT ANY WARRANTY; without even the implied warranty of
-  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
   GNU General Public License for more details.
 
   You should have received a copy of the GNU General Public License
-  along with Grbl.  If not, see <http://www.gnu.org/licenses/>.
+  along with grblHAL. If not, see <http://www.gnu.org/licenses/>.
 */
 
 #include <main.h>
@@ -45,8 +45,13 @@ static I2C_HandleTypeDef i2c_port = {
     .Init.NoStretchMode = I2C_NOSTRETCH_DISABLE
 };
 
-void i2c_init (void)
+i2c_cap_t i2c_start (void)
 {
+    static i2c_cap_t cap = {};
+
+    if(cap.started)
+        return cap;
+
     GPIO_InitTypeDef GPIO_InitStruct = {0};
 
 #if I2C_PORT == 1
@@ -118,6 +123,10 @@ void i2c_init (void)
 
     HAL_I2CEx_ConfigAnalogFilter(&i2c_port, I2C_ANALOGFILTER_ENABLE);
     HAL_I2CEx_ConfigDigitalFilter(&i2c_port, 0);
+
+    cap.started = On;
+
+    return cap;
 }
 
 #if I2C_PORT == 1
@@ -146,50 +155,47 @@ void I2C2_ER_IRQHandler(void)
 
 #endif
 
-bool i2c_probe (uint_fast16_t i2cAddr)
+static inline __attribute__((always_inline)) bool wait_ready (void)
 {
-    //wait for bus to be ready
-    while (HAL_I2C_GetState(&i2c_port) != HAL_I2C_STATE_READY) {
+    while(i2c_port.State != HAL_I2C_STATE_READY) {
         if(!hal.stream_blocking_callback())
             return false;
     }
 
-    return HAL_I2C_IsDeviceReady(&i2c_port, i2cAddr << 1, 4, 10) == HAL_OK;
+    return true;
 }
 
-void i2c_get_keycode (uint_fast16_t i2cAddr, keycode_callback_ptr callback)
+bool i2c_probe (i2c_address_t i2cAddr)
 {
-    keycode = 0;
-    keypad_callback = callback;
-
-    HAL_I2C_Master_Receive_IT(&i2c_port, i2cAddr << 1, &keycode, 1);
+    return wait_ready() && HAL_I2C_IsDeviceReady(&i2c_port, i2cAddr << 1, 4, 10) == HAL_OK;
 }
 
-#if EEPROM_ENABLE
-
-nvs_transfer_result_t i2c_nvs_transfer (nvs_transfer_t *i2c, bool read)
+bool i2c_get_keycode (i2c_address_t i2cAddr, keycode_callback_ptr callback)
 {
-    while (HAL_I2C_GetState(&i2c_port) != HAL_I2C_STATE_READY);
+    bool ok;
 
-//    while (HAL_I2C_IsDeviceReady(&i2c_port, (uint16_t)(0xA0), 3, 100) != HAL_OK);
+    if((ok = wait_ready() && HAL_I2C_Master_Receive_IT(&i2c_port, i2cAddr << 1, &keycode, 1) == HAL_OK)) {
+        keycode = 0;
+        keypad_callback = callback;
+    }
+
+    return ok;
+}
+
+bool i2c_transfer (i2c_transfer_t *i2c, bool read)
+{
+    if(!wait_ready())
+        return false;
 
     HAL_StatusTypeDef ret;
 
     if(read)
         ret = HAL_I2C_Mem_Read(&i2c_port, i2c->address << 1, i2c->word_addr, i2c->word_addr_bytes == 2 ? I2C_MEMADD_SIZE_16BIT : I2C_MEMADD_SIZE_8BIT, i2c->data, i2c->count, 100);
-    else {
+    else
         ret = HAL_I2C_Mem_Write(&i2c_port, i2c->address << 1, i2c->word_addr, i2c->word_addr_bytes == 2 ? I2C_MEMADD_SIZE_16BIT : I2C_MEMADD_SIZE_8BIT, i2c->data, i2c->count, 100);
-#if !EEPROM_IS_FRAM
-        hal.delay_ms(5, NULL);
-#endif
-    }
 
-    i2c->data += i2c->count;
-
-    return ret == HAL_OK ? NVS_TransferResult_OK : NVS_TransferResult_Failed;
+    return ret == HAL_OK;
 }
-
-#endif // EEPROM_ENABLE
 
 void HAL_I2C_MasterRxCpltCallback(I2C_HandleTypeDef *hi2c)
 {
@@ -253,4 +259,4 @@ void I2C_DriverInit (TMC_io_driver_t *driver)
 
 #endif // TRINAMIC_ENABLE && TRINAMIC_I2C
 
-#endif // I2C_PORT
+#endif // I2C_ENABLE
