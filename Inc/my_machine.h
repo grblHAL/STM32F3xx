@@ -3,7 +3,7 @@
 
   Part of grblHAL
 
-  Copyright (c) 2021-2024 Terje Io
+  Copyright (c) 2021-2025 Terje Io
 
   grblHAL is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -31,6 +31,7 @@
 //#define SAFETY_DOOR_ENABLE   1 // Enable safety door input.
 //#define KEYPAD_ENABLE        2 // 1: uses a I2C keypad for input.
                                  // 2: uses a serial stream for input.
+//#define DISPLAY_ENABLE       1 // Set to 9 for I2C display protocol, 17 for I2C LED protocol. Other options may be available via plugins.
 //#define ODOMETER_ENABLE      1 // Odometer plugin.
 //#define EEPROM_ENABLE       16 // I2C EEPROM/FRAM support. Set to 16 for 2K, 32 for 4K, 64 for 8K, 128 for 16K and 256 for 16K capacity.
 //#define EEPROM_IS_FRAM       1 // Uncomment when EEPROM is enabled and chip is FRAM, this to remove write delay.
