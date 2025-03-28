@@ -4,7 +4,7 @@
 
   Part of grblHAL
 
-  Copyright (c) 2021-2024 Terje Io
+  Copyright (c) 2021-2025 Terje Io
 
   grblHAL is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -75,11 +75,6 @@
 #define STEPPER_TIMER_IRQn          timerINT(STEPPER_TIMER_N)
 #define STEPPER_TIMER_IRQHandler    timerHANDLER(STEPPER_TIMER_N)
 
-#define PULSE_TIMER_N               3
-#define PULSE_TIMER                 timer(PULSE_TIMER_N)
-#define PULSE_TIMER_IRQn            timerINT(PULSE_TIMER_N)
-#define PULSE_TIMER_IRQHandler      timerHANDLER(PULSE_TIMER_N)
-
 #define SPINDLE_PWM_TIMER_N         1
 #define SPINDLE_PWM_TIMER           timer(SPINDLE_PWM_TIMER_N)
 
@@ -98,11 +93,23 @@
 #include "boards/generic_map.h"
 #endif
 
-// Adjust STEP_PULSE_LATENCY to get accurate step pulse length when required, e.g if using high step rates.
-// The default value is calibrated for 10 microseconds length.
-// NOTE: step output mode, number of axes and compiler optimization settings may all affect this value.
-#ifndef STEP_PULSE_LATENCY
-#define STEP_PULSE_LATENCY 1.1f // microseconds
+// Adjust these values to get more accurate step pulse timings when required, e.g if using high step rates.
+// The default values are calibrated for 5 microsecond pulses.
+// NOTE: step output mode, number of axes and compiler optimization setting may all affect these values.
+
+// Minimum pulse off time.
+#ifndef STEP_PULSE_TOFF_MIN
+#define STEP_PULSE_TOFF_MIN 2.5f
+#endif
+// Time from main stepper interrupt to pulse output, must be less than STEP_PULSE_TOFF.
+// Adjust for correct pulse off time after configuring and running at a step rate > max possible.
+#ifndef STEP_PULSE_TON_LATENCY
+#define STEP_PULSE_TON_LATENCY 2.3f
+#endif
+// Time from step out to step reset.
+// Adjust for correct step pulse time
+#ifndef STEP_PULSE_TOFF_LATENCY
+#define STEP_PULSE_TOFF_LATENCY 1.4f
 #endif
 
 // End configuration

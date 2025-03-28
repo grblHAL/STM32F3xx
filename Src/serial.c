@@ -4,7 +4,7 @@
 
   Part of grblHAL
 
-  Copyright (c) 2019-2024 Terje Io
+  Copyright (c) 2019-2025 Terje Io
 
   grblHAL is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -223,7 +223,7 @@ const io_stream_t *serialInit (uint32_t baud_rate)
     USART->BRR = UART_DIV_SAMPLING16(HAL_RCC_GetPCLK1Freq(), 115200);
     USART->CR1 |= (USART_CR1_UE|USART_CR1_RXNEIE);
 
-    HAL_NVIC_SetPriority(USART3_IRQn, 0, 0);
+    HAL_NVIC_SetPriority(USART3_IRQn, 1, 0);
     HAL_NVIC_EnableIRQ(USART3_IRQn);
 
     return &stream;
