@@ -52,10 +52,6 @@
 #include "eeprom/eeprom.h"
 #endif
 
-#if ODOMETER_ENABLE
-#include "odometer/odometer.h"
-#endif
-
 #if PPI_ENABLE
 #include "laser/ppi.h"
 #endif
