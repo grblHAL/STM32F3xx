@@ -1444,7 +1444,7 @@ bool driver_init (void)
     // Enable EEPROM and serial port here for grblHAL to be able to configure itself and report any errors
 
     hal.info = "STM32F303";
-    hal.driver_version = "250605";
+    hal.driver_version = "250609";
     hal.driver_url = GRBL_URL "/STM32F3xx";
 #ifdef BOARD_NAME
     hal.board = BOARD_NAME;
@@ -1589,7 +1589,7 @@ bool driver_init (void)
 
             aux_inputs.n_pins++;
 
-            if(input->id < Input_Aux0) {
+            if(!(input->id >= Input_Aux0 && input->id <= Input_AuxMax)) {
                 input->id = Input_Aux0 + input->user_port;
                 aux_ctrl_remap_explicit(input->port, input->pin, input->user_port, input);
             }
