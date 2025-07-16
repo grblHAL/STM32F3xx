@@ -1377,9 +1377,19 @@ static bool driver_setup (settings_t *settings)
      *************************/
 
     uint32_t i;
-    for(i = 0 ; i < sizeof(outputpin) / sizeof(output_signal_t); i++) {
+    axes_signals_t st_enable = st_get_enable_out();
+
+    for(i = 0; i < sizeof(outputpin) / sizeof(output_signal_t); i++) {
+
         GPIO_Init.Pin = 1 << outputpin[i].pin;
         GPIO_Init.Mode = outputpin[i].mode.open_drain ? GPIO_MODE_OUTPUT_OD : GPIO_MODE_OUTPUT_PP;
+
+        if(outputpin[i].group == PinGroup_MotorChipSelect ||
+            outputpin[i].group == PinGroup_MotorUART ||
+             outputpin[i].id == Output_SPICS ||
+             (outputpin[i].group == PinGroup_StepperEnable && (st_enable.mask & xbar_fn_to_axismask(outputpin[i].id).mask)))
+            outputpin[i].port->BSRR = GPIO_Init.Pin;
+
         HAL_GPIO_Init(outputpin[i].port, &GPIO_Init);
     }
 
@@ -1444,7 +1454,7 @@ bool driver_init (void)
     // Enable EEPROM and serial port here for grblHAL to be able to configure itself and report any errors
 
     hal.info = "STM32F303";
-    hal.driver_version = "250609";
+    hal.driver_version = "250716";
     hal.driver_url = GRBL_URL "/STM32F3xx";
 #ifdef BOARD_NAME
     hal.board = BOARD_NAME;
