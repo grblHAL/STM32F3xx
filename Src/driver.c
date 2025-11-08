@@ -182,6 +182,9 @@ static output_signal_t outputpin[] = {
 #ifdef SD_CS_PORT
     { .id = Output_SdCardCS,        .port = SD_CS_PORT,             .pin = SD_CS_PIN,               .group = PinGroup_SdCard },
 #endif
+#if defined(MODBUS_RTU_STREAM) && defined(RS485_DIR_PORT)
+    { .id = Output_RS485_Direction, .port = RS485_DIR_PORT,         .pin = RS485_DIR_PIN,           .group = PinGroup_UART + MODBUS_RTU_STREAM },
+#endif
 #ifdef AUXOUTPUT0_PORT
     { .id = Output_Aux0,            .port = AUXOUTPUT0_PORT,        .pin = AUXOUTPUT0_PIN,          .group = PinGroup_AuxOutput },
 #endif
@@ -757,7 +760,7 @@ static void spindlePulseOn (spindle_ptrs_t *spindle, uint_fast16_t pulse_length)
     PPI_TIMER->EGR = TIM_EGR_UG;
     PPI_TIMER->CR1 |= TIM_CR1_CEN;
 
-    spindle_on((ppi_spindle = spindle));
+    spindle_on(spindle);
 }
 
 #endif
@@ -1164,7 +1167,7 @@ static void enumeratePins (bool low_level, pin_info_ptr pin_info, void *data)
         pin.group = ppin->pin.group;
         pin.port = low_level ? ppin->pin.port : (void *)port2char(ppin->pin.port);
         pin.mode = ppin->pin.mode;
-        pin.description = ppin->pin.description;
+        pin.description = ppin->pin.description == NULL ? xbar_group_to_description(ppin->pin.group) : ppin->pin.description;
 
         pin_info(&pin, data);
     } while((ppin = ppin->next));
@@ -1301,7 +1304,7 @@ bool driver_init (void)
     // Enable EEPROM and serial port here for grblHAL to be able to configure itself and report any errors
 
     hal.info = "STM32F303";
-    hal.driver_version = "251015";
+    hal.driver_version = "251023";
     hal.driver_url = GRBL_URL "/STM32F3xx";
 #ifdef BOARD_NAME
     hal.board = BOARD_NAME;
@@ -1374,9 +1377,6 @@ bool driver_init (void)
         .get_state = spindleGetState,
         .get_pwm = spindleGetPWM,
         .update_pwm = spindleSetSpeed,
-  #if PPI_ENABLE
-        .pulse_on = spindlePulseOn,
-  #endif
         .cap = {
             .gpio_controlled = On,
             .variable = On,

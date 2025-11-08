@@ -34,7 +34,21 @@
 
 static stream_rx_buffer_t rxbuf = {0};
 static stream_tx_buffer_t txbuf = {0};
-static enqueue_realtime_command_ptr enqueue_realtime_command = protocol_enqueue_realtime_command;
+static enqueue_realtime_command_ptr enqueue_realtime_command;
+
+static bool uart_release (uint8_t instance);
+static const io_stream_status_t *get_uart_status (uint8_t instance);
+
+static io_stream_status_t stream_status[] = {
+    {
+        .baud_rate = 115200,
+        .format = {
+            .width = Serial_8bit,
+            .stopbits = Serial_StopBits1,
+            .parity = Serial_ParityNone,
+        }
+    }
+};
 
 static io_stream_properties_t serial[] = {
     {
@@ -43,7 +57,9 @@ static io_stream_properties_t serial[] = {
       .flags.claimable = On,
       .flags.claimed = Off,
       .flags.can_set_baud = Off,
-      .claim = serialInit
+      .claim = serialInit,
+      .release = uart_release,
+      .get_status = get_uart_status
     }
 };
 
@@ -59,8 +75,7 @@ void serialRegisterStreams (void)
         .group = PinGroup_UART1,
         .port  = GPIOB,
         .pin   = 10,
-        .mode  = { .mask = PINMODE_OUTPUT },
-        .description = "UART1"
+        .mode  = { .mask = PINMODE_OUTPUT }
     };
 
     static const periph_pin_t rx0 = {
@@ -68,8 +83,7 @@ void serialRegisterStreams (void)
         .group = PinGroup_UART1,
         .port  = GPIOB,
         .pin   = 11,
-        .mode  = { .mask = PINMODE_NONE },
-        .description = "UART1"
+        .mode  = { .mask = PINMODE_NONE }
     };
 
     hal.periph_port.register_pin(&rx0);
@@ -77,6 +91,33 @@ void serialRegisterStreams (void)
 
     stream_register_streams(&streams);
 }
+
+static const io_stream_status_t *get_uart_status (uint8_t instance)
+{
+    stream_status[instance].flags = serial[instance].flags;
+
+    return &stream_status[instance];
+}
+
+
+static bool uart_release (uint8_t instance)
+{
+    bool ok;
+
+    if((ok = serial[instance].flags.claimed))
+        serial[instance].flags.claimed = Off;
+
+    return ok;
+}
+
+#ifdef RS485_DIR_PORT
+
+static void rs485SetDirection (bool tx)
+{
+    DIGITAL_OUT(RS485_DIR_PORT, RS485_DIR_PIN, tx);
+}
+
+#endif // RS485_DIR_PORT
 
 //
 // Returns number of free characters in serial input buffer
@@ -109,7 +150,7 @@ static void serialRxCancel (void)
 //
 // Writes a character to the serial output stream
 //
-static bool serialPutC (const char c)
+static bool serialPutC (const uint8_t c)
 {
     uint16_t next_head = BUFNEXT(txbuf.head, txbuf);    // Get pointer to next free slot in buffer
 
@@ -133,7 +174,7 @@ static void serialWriteS (const char *s)
     char c, *ptr = (char *)s;
 
     while((c = *ptr++) != '\0')
-        serialPutC(c);
+        serialPutC((uint8_t)c);
 }
 
 //
@@ -151,17 +192,17 @@ static void serialWrite(const char *s, uint16_t length)
 //
 // serialGetC - returns -1 if no data available
 //
-static int16_t serialGetC (void)
+static int32_t serialGetC (void)
 {
-    uint_fast16_t tail = rxbuf.tail;    // Get buffer pointer
+    uint_fast16_t tail = rxbuf.tail;            // Get buffer pointer
 
     if(tail == rxbuf.head)
         return -1; // no data available
 
-    char data = rxbuf.data[tail];       // Get next character
-    rxbuf.tail = BUFNEXT(tail, rxbuf);  // and update pointer
+    int32_t data = (int32_t)rxbuf.data[tail];   // Get next character
+    rxbuf.tail = BUFNEXT(tail, rxbuf);          // and update pointer
 
-    return (int16_t)data;
+    return data;
 }
 
 static bool serialSuspendInput (bool suspend)
@@ -169,7 +210,7 @@ static bool serialSuspendInput (bool suspend)
     return stream_rx_suspend(&rxbuf, suspend);
 }
 
-static bool serialEnqueueRtCommand (char c)
+static bool serialEnqueueRtCommand (uint8_t c)
 {
     return enqueue_realtime_command(c);
 }
@@ -197,6 +238,9 @@ const io_stream_t *serialInit (uint32_t baud_rate)
         .reset_read_buffer = serialRxFlush,
         .cancel_read_buffer = serialRxCancel,
         .suspend_read = serialSuspendInput,
+#if MODBUS_RTU_STREAM == 0 && defined(RS485_DIR_PORT)
+        .set_direction = rs485SetDirection,
+#endif
         .set_enqueue_rt_handler = serialSetRtHandler
     };
 
@@ -205,26 +249,31 @@ const io_stream_t *serialInit (uint32_t baud_rate)
 
     serial[0].flags.claimed = On;
 
-    GPIO_InitTypeDef GPIO_InitStruct = {0};
+    if(!serial[0].flags.init_ok) {
 
-    GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
-    GPIO_InitStruct.Pull = GPIO_NOPULL;
-    GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
+        __HAL_RCC_GPIOB_CLK_ENABLE();
+        __HAL_RCC_USART3_CLK_ENABLE();
 
-    __HAL_RCC_GPIOB_CLK_ENABLE();
-    __HAL_RCC_USART3_CLK_ENABLE();
+        GPIO_InitTypeDef GPIO_InitStruct = {
+            .Mode = GPIO_MODE_AF_PP,
+            .Pull = GPIO_NOPULL,
+            .Speed = GPIO_SPEED_FREQ_HIGH,
+            .Pin = GPIO_PIN_10|GPIO_PIN_11, // tx = 10 (yl), rx = 11 (bl)
+            .Alternate = GPIO_AF7_USART3
+        };
+        HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
 
-    // tx = 10 (yl), rx = 11 (bl)
-    GPIO_InitStruct.Pin = GPIO_PIN_10|GPIO_PIN_11;
-    GPIO_InitStruct.Alternate = GPIO_AF7_USART3;
-    HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
+        USART->CR1 = USART_CR1_RE|USART_CR1_TE;
+        USART->BRR = UART_DIV_SAMPLING16(HAL_RCC_GetPCLK1Freq(), 115200);
+        USART->CR1 |= (USART_CR1_UE|USART_CR1_RXNEIE);
 
-    USART->CR1 = USART_CR1_RE|USART_CR1_TE;
-    USART->BRR = UART_DIV_SAMPLING16(HAL_RCC_GetPCLK1Freq(), 115200);
-    USART->CR1 |= (USART_CR1_UE|USART_CR1_RXNEIE);
+        HAL_NVIC_SetPriority(USART3_IRQn, 1, 0);
+        HAL_NVIC_EnableIRQ(USART3_IRQn);
 
-    HAL_NVIC_SetPriority(USART3_IRQn, 1, 0);
-    HAL_NVIC_EnableIRQ(USART3_IRQn);
+        serial[0].flags.init_ok = On;
+    }
+
+    stream_set_defaults(&stream, baud_rate);
 
     return &stream;
 }
@@ -232,7 +281,7 @@ const io_stream_t *serialInit (uint32_t baud_rate)
 void USART_IRQHandler (void)
 {
     if(USART->ISR & USART_ISR_RXNE) {
-        char data = USART->RDR;
+        uint8_t data = USART->RDR;
         if(!enqueue_realtime_command(data)) {                   // Check and strip realtime commands...
             uint16_t next_head = BUFNEXT(rxbuf.head, rxbuf);    // Get and increment buffer pointer
             if(next_head == rxbuf.tail)                         // If buffer full
