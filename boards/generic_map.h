@@ -96,16 +96,6 @@
 #define COOLANT_MIST_PIN        AUXOUTPUT4_PIN
 #endif
 
-// Define user-control controls (cycle start, reset, feed hold) input pins.
-#define CONTROL_PORT            GPIOB
-#define RESET_PIN               5
-#define FEED_HOLD_PIN           6
-#define CYCLE_START_PIN         7
-#if SAFETY_DOOR_ENABLE
-#define SAFETY_DOOR_PIN         8
-#endif
-#define CONTROL_INMODE GPIO_SHIFT5
-
 #define AUXINPUT0_PORT          GPIOB
 #define AUXINPUT0_PIN           15
 #define AUXINPUT1_PORT          GPIOB // Safety door

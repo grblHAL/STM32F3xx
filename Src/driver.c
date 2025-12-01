@@ -67,15 +67,6 @@
 
 #define DRIVER_IRQMASK (LIMIT_MASK|I2C_STROBE_BIT)
 
-typedef union {
-    uint8_t mask;
-    struct {
-        uint8_t limits :1,
-                door   :1,
-                unused :6;
-    };
-} debounce_t;
-
 extern __IO uint32_t uwTick;
 static uint32_t aux_irq = 0;
 static bool IOInitDone = false;
@@ -98,6 +89,9 @@ static spindle_id_t spindle_id = -1;
 #endif
 #if DRIVER_SPINDLE_PWM_ENABLE
 static spindle_pwm_t spindle_pwm = { .offset =  -1 };
+#endif
+#ifdef SAFETY_DOOR_PIN
+static pin_debounce_t debounce;
 #endif
 
 #include "grbl/stepdir_map.h"
@@ -1304,7 +1298,7 @@ bool driver_init (void)
     // Enable EEPROM and serial port here for grblHAL to be able to configure itself and report any errors
 
     hal.info = "STM32F303";
-    hal.driver_version = "251023";
+    hal.driver_version = "251201";
     hal.driver_url = GRBL_URL "/STM32F3xx";
 #ifdef BOARD_NAME
     hal.board = BOARD_NAME;
