@@ -130,7 +130,7 @@
 #endif
 
 #if PROBE_ENABLE
-#ifdef AUXINPUT1_PORT
+#ifdef AUXINPUT5_PORT
 #define PROBE_PORT              AUXINPUT5_PORT
 #define PROBE_PIN               AUXINPUT5_PIN
 #else
