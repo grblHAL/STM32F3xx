@@ -1424,7 +1424,7 @@ bool driver_init (void)
     // Enable EEPROM and serial port here for grblHAL to be able to configure itself and report any errors
 
     hal.info = "STM32F303";
-    hal.driver_version = "261003";
+    hal.driver_version = "261029";
     hal.driver_url = GRBL_URL "/STM32F3xx";
 #ifdef BOARD_NAME
     hal.board = BOARD_NAME;
@@ -1541,8 +1541,7 @@ bool driver_init (void)
     hal.coolant_cap.bits = COOLANT_ENABLE;
     hal.driver_cap.software_debounce = On;
     hal.driver_cap.step_pulse_delay = On;
-    hal.driver_cap.control_pull_up = On;
-    hal.driver_cap.limits_pull_up = On;
+    hal.driver_cap.pullup_enabled = PULLUPS_ENABLE;
 
     static pin_group_pins_t aux_inputs = {0}, aux_outputs = {0};
 
